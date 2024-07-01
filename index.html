@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="eng">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width-device-width, initial-scale=1.0">
+    <title>TFCAnvilAssistant</title>
+</head>
+<body>
+    <h1>TFC Anvil Assistant (BETA)</h1>
+    <body>
+        <p>Start (Green Cursor, Default: 0)</p>
+        <input type="number" id="startinput" max=147 min=-2 value=0>
+        <p>Goal (Red Cursor)</p>
+        <input type="number" id="goalinput" max=147 min=-2 value=60>
+
+        <!--<input type="radio" name = "laststep" value = "light_hit">
+            <label for="light_hit">Light Hit</label>
+            <input type="radio" name = "laststep" value = "medium_hit">
+            <label for="medium_hit">Medium Hit</label>
+            <input type="radio" name = "laststep" value = "hard_hit">
+            <label for="hard_hit">Hard Hit</label>-->
+
+        <p>Leftmost step (last)</p>
+        <div class ="radiobuttons">
+            <input type="radio" name = "laststep" value = "none" checked="checked">
+            <label for="none">None</label>
+            <br>
+            <input type="radio" name = "laststep" value = "hit">
+            <label for="hit">Hit</label>
+            <input type="radio" name = "laststep" value = "draw">
+            <label for="draw">Draw</label>
+            <br>
+            <input type="radio" name = "laststep" value = "punch">
+            <label for="punch">Punch</label>
+            <input type="radio" name = "laststep" value = "bend">
+            <label for="bend">Bend</label>
+            <input type="radio" name = "laststep" value = "upset">
+            <label for="upset">Upset</label>
+            <input type="radio" name = "laststep" value = "shrink">
+            <label for="shrink">Shrink</label>
+        </div>
+
+        <p>Middle step</p>
+        <div class ="radiobuttons">
+            <input type="radio" name = "secondstep" value = "none" checked="checked">
+            <label for="none">None</label>
+            <br>
+            <input type="radio" name = "secondstep" value = "hit">
+            <label for="hit">Hit</label>
+            <input type="radio" name = "secondstep" value = "draw">
+            <label for="draw">Draw</label>
+            <br>
+            <input type="radio" name = "secondstep" value = "punch">
+            <label for="punch">Punch</label>
+            <input type="radio" name = "secondstep" value = "bend">
+            <label for="bend">Bend</label>
+            <input type="radio" name = "secondstep" value = "upset">
+            <label for="upset">Upset</label>
+            <input type="radio" name = "secondstep" value = "shrink">
+            <label for="shrink">Shrink</label>
+        </div>
+
+        <p>Rightmost step</p>
+        <div class ="radiobuttons">
+            <input type="radio" name = "thirdstep" value = "none" checked="checked">
+            <label for="none">None</label>
+            <br>
+            <input type="radio" name = "thirdstep" value = "hit">
+            <label for="hit">Hit</label>
+            <input type="radio" name = "thirdstep" value = "draw">
+            <label for="draw">Draw</label>
+            <br>
+            <input type="radio" name = "thirdstep" value = "punch">
+            <label for="punch">Punch</label>
+            <input type="radio" name = "thirdstep" value = "bend">
+            <label for="bend">Bend</label>
+            <input type="radio" name = "thirdstep" value = "upset">
+            <label for="upset">Upset</label>
+            <input type="radio" name = "thirdstep" value = "shrink">
+            <label for="shrink">Shrink</label>
+        </div>
+        <br>
+        <button onclick="calculateBestSteps()">Calculate!</button>
+        <br>
+        <p>Steps:</p>
+        <p id="outputtext">Output goes here...</p>
+        <div id="outputimages">
+
+        </p>
+        <script>
+            var actions = {
+                "light_hit":-3,
+                "medium_hit":-6,
+                "hard_hit":-9,
+                "draw":-15,
+
+                "punch":2,
+                "bend":7,
+                "upset":13,
+                "shrink":16,
+            }
+
+            var solvers_positive = [ // These are used if we cannot find the correct course of action, pretty much.
+                "",
+                "bend,medium_hit", // +1
+                "punch",
+                "bend,punch,medium_hit",
+                "punch,punch",
+                "bend,bend,hard_hit",
+                "bend,light_hit",
+                "bend",
+                "bend,bend,medium_hit",
+                "bend,punch",
+                "upset,light_hit",
+                "bend,punch,punch",
+                "upset,punch,light_hit",
+                "upset",
+                "bend,bend",
+                "upset,punch",
+                "shrink",
+                "shrink,bend,medium_hit",
+                "shrink,punch",
+                "shrink,bend,punch,medium_hit", // +19
+                "upset,bend",
+                "bend,bend,bend",
+                "shrink,bend,light_hit"
+            ]
+
+            var solvers_negative = [
+                "",
+                "punch,light_hit", // -1
+                "upset,draw",
+            ]
+
+            function findCombinations(target, numbers) {
+                    var result = [];
+                    backtrack(target, numbers, [], 0);
+                    return result;
+
+                    function backtrack(remaining, nums, combination, start) {
+                    if (remaining < 0) {
+                        return;
+                    } else if (remaining === 0) {
+                        result.push(combination.slice());
+                    } else {
+                        for (var i = start; i < nums.length; i++) {
+                        combination.push(nums[i]);
+                        backtrack(remaining - nums[i], nums, combination, i);
+                        combination.pop();
+                        }
+                    }
+                    }
+                }
+            
+            function calculateBestSteps() {
+                var outputtext = document.getElementById("outputtext")
+                var outputimages = document.getElementById("outputimages")
+                var current_place = document.getElementById("goalinput").value - document.getElementById("startinput").value;
+                outputtext.innerHTML = "";
+                while (outputimages.hasChildNodes() == true) {
+                    outputimages.removeChild(outputimages.lastChild);
+                }
+                var steps = [] // We actually do the steps in reverse order.
+
+                function addAction(action_name) {
+                    if (action_name == "hit") {
+                        action_name = "light_hit"
+                    }
+                    if (actions[action_name] != null) {
+                        var action_cost = actions[action_name]
+                        current_place = current_place - action_cost
+                        steps.push(action_name)
+                    }
+                }
+
+                var laststep = document.querySelector('input[name="laststep"]:checked')
+                var secondstep = document.querySelector('input[name="secondstep"]:checked')
+                var thirdstep = document.querySelector('input[name="thirdstep"]:checked')
+
+                addAction(laststep.value)
+                addAction(secondstep.value)
+                addAction(thirdstep.value)
+
+                var combinations = findCombinations(current_place, [actions.shrink, actions.upset, actions.bend, actions.punch])
+
+                var fewest_steps = 100
+                var candidates = []
+
+                combinations.forEach(function(combination) {
+                    var combination_length = combination.length
+                    if (combination_length < fewest_steps) {
+                        fewest_steps = combination_length
+                        candidates = []
+                        candidates.push(combination)
+                    } else if (combination_length == fewest_steps) {
+                        candidates.push(combination)
+                    }
+                });
+
+                var least_complex = 100
+                var answer = null
+
+                candidates.forEach(function(candidate) {
+                    var complexity = 0
+                    if (candidate.includes(actions.shrink)) {
+                        complexity =+ 1
+                    }
+                    if (candidate.includes(actions.upset)) {
+                        complexity =+ 1
+                    }
+                    if (candidate.includes(actions.bend)) {
+                        complexity =+ 1
+                    }
+                    if (candidate.includes(actions.punch)) {
+                        complexity =+ 1
+                    }
+                    if (complexity < least_complex) {
+                        least_complex = complexity
+                        answer = candidate
+                    }
+                });
+
+                function append_action(action_name) {
+                    var image_element = document.createElement("img")
+                    image_element.style.imageRendering = "pixelated"
+                    image_element.height = 64
+                    image_element.width = 64
+                    
+                    image_element.src = "images/" + action_name + ".png"
+                    document.getElementById("outputimages").appendChild(image_element)
+                    outputtext.innerHTML = outputtext.innerHTML + action_name + ", "
+                }
+
+                if (answer != null) {
+                    for (var i = 0; i < answer.length; i++) {
+                        var action_name = "unknown"
+                        if (answer[i] == actions.shrink) {
+                            action_name = "shrink"
+                        } else if (answer[i] == actions.upset) {
+                            action_name = "upset"
+                        } else if (answer[i] == actions.bend) {
+                            action_name = "bend"
+                        } else if (answer[i] == actions.punch) {
+                            action_name = "punch"
+                        }
+                        append_action(action_name)
+                    }
+                    for (var i = steps.length-1; i >= 0; i--) {
+                        append_action(steps[i])
+                    }
+                } else {
+                    output.innerHTML = "Could not find answer!"
+                }
+                
+
+                //output.innerHTML = current_place;
+            }
+        </script>
+    </body>
+</body>
+</html>

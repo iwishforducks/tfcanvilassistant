@@ -1,0 +1,8 @@
+#outputimages > * {
+    display: block;
+    margin-top: 16px;
+}
+
+#outputimages > *:first-child {
+    margin-top: 0px;
+}
